@@ -1,0 +1,68 @@
+import { Context } from "go-like-ctx";
+
+type TaskFn = (ctx: Context) => Promise<unknown> | unknown;
+
+type ErrGroup = {
+  go: (fn: TaskFn) => void;
+  wait: () => Promise<void>;
+};
+
+class ErrGroupError extends Error {
+  readonly code: "ERRGROUP_USAGE" | "ERRGROUP_TASK";
+
+  constructor({
+    message,
+    code
+  }: {
+    message: string;
+    code: "ERRGROUP_USAGE" | "ERRGROUP_TASK";
+  }) {
+    super(message);
+    this.name = "ErrGroupError";
+    this.code = code;
+  }
+}
+
+export function errgroup(parent: Context): ErrGroup {
+  const ctx = parent.withCancel();
+  const tasks: Promise<void>[] = [];
+  let firstErr: unknown = null;
+  let waiting = false;
+
+  const run = async (fn: TaskFn) => {
+    try {
+      await fn(ctx);
+    } catch (err) {
+      if (firstErr === null) {
+        firstErr =
+          err ??
+          new ErrGroupError({
+            message: "errgroup: task failed",
+            code: "ERRGROUP_TASK"
+          });
+        ctx.cancel();
+      }
+    }
+  };
+
+  return {
+    go(fn) {
+      if (waiting) {
+        throw new ErrGroupError({
+          message: "errgroup: go called after wait",
+          code: "ERRGROUP_USAGE"
+        });
+      }
+
+      const task = Promise.resolve().then(() => run(fn));
+      tasks.push(task);
+    },
+    async wait() {
+      waiting = true;
+      await Promise.allSettled(tasks);
+      if (firstErr !== null) {
+        throw firstErr;
+      }
+    }
+  };
+}
