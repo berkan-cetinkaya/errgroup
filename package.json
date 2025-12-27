@@ -16,6 +16,7 @@
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "example:register": "tsx examples/register.ts",
     "prepublishOnly": "npm run build",
     "test": "vitest",
     "test:watch": "vitest --watch"
@@ -24,6 +25,8 @@
     "go-like-ctx": "^0.1.0"
   },
   "devDependencies": {
+    "@types/node": "^22.10.2",
+    "tsx": "^4.15.5",
     "typescript": "^5.4.5",
     "vitest": "^4.0.16"
   }
