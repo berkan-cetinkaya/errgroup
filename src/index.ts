@@ -7,6 +7,10 @@ type ErrGroup = {
   wait: () => Promise<void>;
 };
 
+type ErrGroupOptions = {
+  onError?: (err: Error) => void;
+};
+
 class ErrGroupError extends Error {
   readonly code: "ERRGROUP_USAGE" | "ERRGROUP_TASK";
 
@@ -23,23 +27,30 @@ class ErrGroupError extends Error {
   }
 }
 
-export function errgroup(parent: Context): ErrGroup {
+export function errgroup(parent: Context, opts: ErrGroupOptions = {}): ErrGroup {
   const ctx = parent.withCancel();
   const tasks: Promise<void>[] = [];
   let firstErr: unknown = null;
   let waiting = false;
+  let onErrorCalled = false;
 
   const run = async (fn: TaskFn) => {
     try {
       await fn(ctx);
     } catch (err) {
       if (firstErr === null) {
-        firstErr =
-          err ??
-          new ErrGroupError({
-            message: "errgroup: task failed",
-            code: "ERRGROUP_TASK"
-          });
+        const normalizedErr =
+          err instanceof Error
+            ? err
+            : new ErrGroupError({
+                message: "errgroup: task failed",
+                code: "ERRGROUP_TASK"
+              });
+        firstErr = normalizedErr;
+        if (opts.onError && !onErrorCalled) {
+          onErrorCalled = true;
+          opts.onError(normalizedErr);
+        }
         ctx.cancel();
       }
     }

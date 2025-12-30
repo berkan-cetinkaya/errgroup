@@ -17,7 +17,11 @@ import { errgroup } from "errgroup";
 import { background } from "go-like-ctx";
 
 const ctx = background().withTimeout(5_000);
-const g = errgroup(ctx);
+const g = errgroup(ctx, {
+  onError(err) {
+    console.error("register failed", err);
+  }
+});
 
 g.go(async (ctx) => {
   await taskA(ctx);
@@ -38,6 +42,7 @@ try {
 
 - Explicit context passing only.
 - First error wins and cancels the shared context.
+- Optional `onError` runs exactly once with the first error.
 - Other tasks should observe ctx and exit early.
 - `wait()` resolves after all tasks settle, then rethrows the first error.
 - `go()` after `wait()` throws a usage error.

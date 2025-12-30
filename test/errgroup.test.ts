@@ -69,4 +69,53 @@ describe("errgroup", () => {
       message: "errgroup: go called after wait"
     });
   });
+
+  it("calls onError once with the first error", async () => {
+    const errors: Error[] = [];
+    const g = errgroup(background(), {
+      onError(err) {
+        errors.push(err);
+      }
+    });
+
+    const first = new Error("first");
+    const second = new Error("second");
+
+    g.go(async () => {
+      await delay(5);
+      throw first;
+    });
+
+    g.go(async () => {
+      await delay(10);
+      throw second;
+    });
+
+    await expect(g.wait()).rejects.toBe(first);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toBe(first);
+  });
+
+  it("calls onError with a fallback error when the error is not an Error", async () => {
+    const errors: Error[] = [];
+    const g = errgroup(background(), {
+      onError(err) {
+        errors.push(err);
+      }
+    });
+
+    g.go(() => {
+      throw undefined;
+    });
+
+    await expect(g.wait()).rejects.toMatchObject({
+      name: "ErrGroupError",
+      code: "ERRGROUP_TASK"
+    });
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toMatchObject({
+      name: "ErrGroupError",
+      code: "ERRGROUP_TASK"
+    });
+  });
 });
