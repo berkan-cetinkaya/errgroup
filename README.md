@@ -38,6 +38,16 @@ try {
 }
 ```
 
+Use `goGuarded` to prevent tasks from starting on a cancelled context and to
+fail if cancellation happens after the task completes.
+
+```js
+const g = errgroup(ctx);
+g.goGuarded(async (ctx) => {
+  await doWork(ctx);
+});
+```
+
 ## Behavior
 
 - Explicit context passing only.

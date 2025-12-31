@@ -118,4 +118,29 @@ describe("errgroup", () => {
       code: "ERRGROUP_TASK"
     });
   });
+
+  it("goGuarded does not invoke fn when the context is already cancelled", async () => {
+    const parent = background().withCancel();
+    parent.cancel();
+    const g = errgroup(parent);
+    let called = false;
+
+    g.goGuarded(() => {
+      called = true;
+    });
+
+    await expect(g.wait()).rejects.toBeDefined();
+    expect(called).toBe(false);
+  });
+
+  it("goGuarded rejects when the task cancels the context before returning", async () => {
+    const parent = background().withCancel();
+    const g = errgroup(parent);
+
+    g.goGuarded((ctx) => {
+      ctx.cancel();
+    });
+
+    await expect(g.wait()).rejects.toBeDefined();
+  });
 });
