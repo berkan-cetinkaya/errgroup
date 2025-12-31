@@ -12,7 +12,7 @@ npm install errgroup go-like-ctx
 
 ## Usage
 
-```ts
+```js
 import { errgroup } from "errgroup";
 import { background } from "go-like-ctx";
 
@@ -49,7 +49,7 @@ try {
 
 ## Example: Register endpoint
 
-See `examples/register.ts` for a more complete flow that verifies captcha, saves
+See `examples/register.js` for a more complete flow that verifies captcha, saves
 the user, subscribes them to email, sends a confirmation, and publishes
 analytics under a single context.
 

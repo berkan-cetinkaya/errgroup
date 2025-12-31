@@ -16,7 +16,7 @@
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "example:register": "tsx examples/register.ts",
+    "example:register": "node examples/register.js",
     "prepublishOnly": "npm run build",
     "test": "vitest",
     "test:watch": "vitest --watch"

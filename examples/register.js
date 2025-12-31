@@ -1,20 +1,28 @@
 import { errgroup } from "errgroup";
-import { Context, background } from "go-like-ctx";
+import { background } from "go-like-ctx";
 import { pathToFileURL } from "node:url";
 
-type RegisterInput = {
-  email: string;
-  password: string;
-  captchaToken: string;
-};
+/**
+ * @typedef {Object} RegisterInput
+ * @property {string} email
+ * @property {string} password
+ * @property {string} captchaToken
+ */
 
-type RegisterResult = {
-  userId: string;
-};
+/**
+ * @typedef {Object} RegisterResult
+ * @property {string} userId
+ */
 
-export async function registerEndpoint(
-  input: RegisterInput
-): Promise<RegisterResult> {
+/**
+ * @typedef {import("go-like-ctx").Context} Context
+ */
+
+/**
+ * @param {RegisterInput} input
+ * @returns {Promise<RegisterResult>}
+ */
+export async function registerEndpoint(input) {
   const ctx = background().withTimeout(10_000);
   try {
     console.log("register: start");
@@ -25,7 +33,12 @@ export async function registerEndpoint(
   }
 }
 
-async function register(ctx: Context, input: RegisterInput): Promise<RegisterResult> {
+/**
+ * @param {Context} ctx
+ * @param {RegisterInput} input
+ * @returns {Promise<RegisterResult>}
+ */
+async function register(ctx, input) {
   ctx.throwIfCancelled();
   console.log("register: verify captcha");
   await verifyCaptcha(ctx, input.captchaToken);
@@ -35,9 +48,9 @@ async function register(ctx: Context, input: RegisterInput): Promise<RegisterRes
 
   console.log("register: fan-out tasks");
   const g = errgroup(ctx);
-  g.go((ctx) => subscribeEmail(ctx, userId, input.email));
-  g.go((ctx) => sendConfirmation(ctx, userId, input.email));
-  g.go((ctx) => publishAnalytics(ctx, userId));
+  g.go((childCtx) => subscribeEmail(childCtx, userId, input.email));
+  g.go((childCtx) => sendConfirmation(childCtx, userId, input.email));
+  g.go((childCtx) => publishAnalytics(childCtx, userId));
 
   console.log("register: wait for tasks");
   await g.wait();
@@ -46,7 +59,12 @@ async function register(ctx: Context, input: RegisterInput): Promise<RegisterRes
   return { userId };
 }
 
-async function verifyCaptcha(ctx: Context, token: string): Promise<void> {
+/**
+ * @param {Context} ctx
+ * @param {string} token
+ * @returns {Promise<void>}
+ */
+async function verifyCaptcha(ctx, token) {
   ctx.throwIfCancelled();
   console.log("captcha: verify");
   await delay(20);
@@ -55,10 +73,12 @@ async function verifyCaptcha(ctx: Context, token: string): Promise<void> {
   }
 }
 
-async function createUser(
-  ctx: Context,
-  input: RegisterInput
-): Promise<string> {
+/**
+ * @param {Context} ctx
+ * @param {RegisterInput} input
+ * @returns {Promise<string>}
+ */
+async function createUser(ctx, input) {
   ctx.throwIfCancelled();
   console.log("user: create");
   await delay(50);
@@ -68,11 +88,13 @@ async function createUser(
   return "user_123";
 }
 
-async function subscribeEmail(
-  ctx: Context,
-  userId: string,
-  email: string
-): Promise<void> {
+/**
+ * @param {Context} ctx
+ * @param {string} userId
+ * @param {string} email
+ * @returns {Promise<void>}
+ */
+async function subscribeEmail(ctx, userId, email) {
   ctx.throwIfCancelled();
   console.log("email: subscribe");
   await delay(30);
@@ -81,11 +103,13 @@ async function subscribeEmail(
   }
 }
 
-async function sendConfirmation(
-  ctx: Context,
-  userId: string,
-  email: string
-): Promise<void> {
+/**
+ * @param {Context} ctx
+ * @param {string} userId
+ * @param {string} email
+ * @returns {Promise<void>}
+ */
+async function sendConfirmation(ctx, userId, email) {
   ctx.throwIfCancelled();
   console.log("email: confirmation");
   await delay(30);
@@ -94,7 +118,12 @@ async function sendConfirmation(
   }
 }
 
-async function publishAnalytics(ctx: Context, userId: string): Promise<void> {
+/**
+ * @param {Context} ctx
+ * @param {string} userId
+ * @returns {Promise<void>}
+ */
+async function publishAnalytics(ctx, userId) {
   ctx.throwIfCancelled();
   console.log("analytics: publish");
   await delay(10);
@@ -103,7 +132,11 @@ async function publishAnalytics(ctx: Context, userId: string): Promise<void> {
   }
 }
 
-function delay(ms: number): Promise<void> {
+/**
+ * @param {number} ms
+ * @returns {Promise<void>}
+ */
+function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
