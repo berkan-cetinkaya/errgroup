@@ -119,28 +119,32 @@ describe("errgroup", () => {
     });
   });
 
-  it("goGuarded does not invoke fn when the context is already cancelled", async () => {
-    const parent = background().withCancel();
-    parent.cancel();
-    const g = errgroup(parent);
-    let called = false;
+  it("waitSafe does not reject on error and wait rejects", async () => {
+    const errors: Error[] = [];
+    const g = errgroup(background(), {
+      onError(err) {
+        errors.push(err);
+      }
+    });
+    const err = new Error("boom");
 
-    g.goGuarded(() => {
-      called = true;
+    g.go(() => {
+      throw err;
     });
 
-    await expect(g.wait()).rejects.toBeDefined();
-    expect(called).toBe(false);
-  });
+    const result = await g.waitSafe();
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error).toBe(err);
+    }
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toBe(err);
 
-  it("goGuarded rejects when the task cancels the context before returning", async () => {
-    const parent = background().withCancel();
-    const g = errgroup(parent);
-
-    g.goGuarded((ctx) => {
-      ctx.cancel();
+    const g2 = errgroup(background());
+    g2.go(() => {
+      throw err;
     });
-
-    await expect(g.wait()).rejects.toBeDefined();
+    await expect(g2.wait()).rejects.toBe(err);
   });
+
 });

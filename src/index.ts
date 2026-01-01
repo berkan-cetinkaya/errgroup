@@ -4,8 +4,8 @@ type TaskFn = (ctx: Context) => Promise<unknown> | unknown;
 
 type ErrGroup = {
   go: (fn: TaskFn) => void;
-  goGuarded: (fn: TaskFn) => void;
   wait: () => Promise<void>;
+  waitSafe: () => Promise<{ ok: true } | { ok: false; error: Error }>;
 };
 
 type ErrGroupOptions = {
@@ -57,14 +57,6 @@ export function errgroup(parent: Context, opts: ErrGroupOptions = {}): ErrGroup 
     }
   };
 
-  const runGuarded = async (fn: TaskFn) => {
-    await run(async (innerCtx) => {
-      innerCtx.throwIfCancelled();
-      await fn(innerCtx);
-      innerCtx.throwIfCancelled();
-    });
-  };
-
   return {
     go(fn) {
       if (waiting) {
@@ -77,23 +69,27 @@ export function errgroup(parent: Context, opts: ErrGroupOptions = {}): ErrGroup 
       const task = Promise.resolve().then(() => run(fn));
       tasks.push(task);
     },
-    goGuarded(fn) {
-      if (waiting) {
-        throw new ErrGroupError({
-          message: "errgroup: goGuarded called after wait",
-          code: "ERRGROUP_USAGE"
-        });
-      }
-
-      const task = Promise.resolve().then(() => runGuarded(fn));
-      tasks.push(task);
-    },
     async wait() {
-      waiting = true;
-      await Promise.allSettled(tasks);
-      if (firstErr !== null) {
-        throw firstErr;
+      const err = await finalize();
+      if (err !== null) {
+        throw err;
       }
+    },
+    async waitSafe() {
+      const err = await finalize();
+      if (err !== null) {
+        return { ok: false, error: err };
+      }
+      return { ok: true };
     }
   };
+
+  async function finalize(): Promise<Error | null> {
+    waiting = true;
+    await Promise.allSettled(tasks);
+    if (firstErr !== null) {
+      return firstErr as Error;
+    }
+    return null;
+  }
 }

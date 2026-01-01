@@ -1,6 +1,6 @@
 {
   "name": "errgroup",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Structured concurrency for Node.js inspired by Go's errgroup",
   "type": "module",
   "main": "dist/index.js",

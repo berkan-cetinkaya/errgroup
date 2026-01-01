@@ -38,14 +38,13 @@ try {
 }
 ```
 
-Use `goGuarded` to prevent tasks from starting on a cancelled context and to
-fail if cancellation happens after the task completes.
+If you want to observe errors without throwing, use `waitSafe()`.
 
 ```js
-const g = errgroup(ctx);
-g.goGuarded(async (ctx) => {
-  await doWork(ctx);
-});
+const res = await g.waitSafe();
+if (!res.ok) {
+  console.error("task failed", res.error);
+}
 ```
 
 ## Behavior
